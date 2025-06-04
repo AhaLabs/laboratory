@@ -18,6 +18,7 @@ export const useContractClientFromRpc = ({
           contractId,
           networkPassphrase,
           rpcUrl,
+          allowHttp: true, // Necessary for local networks or test environments
         });
 
         return client;

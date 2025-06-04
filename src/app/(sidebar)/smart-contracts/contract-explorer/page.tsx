@@ -26,6 +26,7 @@ import { trackEvent, TrackingEvent } from "@/metrics/tracking";
 
 import { ContractInfo } from "./components/ContractInfo";
 import { InvokeContract } from "./components/InvokeContract";
+import { ContractInfoApiResponse } from "@/types/types";
 
 export default function ContractExplorer() {
   const { network, smartContracts, savedContractId, clearSavedContractId } =
@@ -37,15 +38,12 @@ export default function ContractExplorer() {
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
 
   const {
-    data: contractInfoData,
+    data: contractInfoDataFromStellarExpertAPI,
     error: contractInfoError,
     isLoading: isContractInfoLoading,
     isFetching: isContractInfoFetching,
-    refetch: fetchContractInfo,
-  } = useSEContractInfo({
-    networkId: network.id,
-    contractId: contractIdInput,
-  });
+    refetch: fetchContractInfoFromStellarExpertAPI,
+  } = useSEContractInfo({ networkId: network.id, contractId: contractIdInput });
 
   const {
     data: contractClient,
@@ -58,8 +56,23 @@ export default function ContractExplorer() {
     rpcUrl: network.rpcUrl,
   });
 
+  // Fallback contract info data for testing purposes
+  // This should be removed once the contract info is properly fetched
+  // for local networks or when using custom networks
+  const contractInfoData =
+    contractInfoDataFromStellarExpertAPI ||
+    ({
+      contract: contractIdInput,
+      created: 1672000000,
+      creator: "creatorPublicKey",
+      description: "dummy description",
+      owner: "",
+      wasm: "5e6f40a51c590a27554c15ad368ae3772c3ca8bb219a54eb4f3e7ee93f69a4c5",
+    } as ContractInfoApiResponse);
+
   const rpcUrl = network.rpcUrl;
   const wasmHash = contractInfoData?.wasm || "";
+
   const isDataLoaded = Boolean(contractInfoData);
 
   const {
@@ -117,13 +130,26 @@ export default function ContractExplorer() {
     }
   };
 
-  const isCurrentNetworkSupported = ["mainnet", "testnet"].includes(network.id);
+  const isCustomNetwork = network.id === "custom";
+  const isCurrentNetworkSupported =
+    ["mainnet", "testnet"].includes(network.id) || isCustomNetwork;
+
   const isLoadContractDisabled =
     !isCurrentNetworkSupported ||
     !network.rpcUrl ||
     !contractIdInput ||
     Boolean(contractIdInputError);
 
+  const fetchContractInfo = () => {
+    // When using custom network, we can't fetch contract info from StellarExpert API
+    // for now this is being bypassed for testing
+    if (!isCustomNetwork) {
+      fetchContractInfoFromStellarExpertAPI();
+    }
+
+    // ideally we would have a different way for getting the contract info for local networks
+    // and properly populue the contractInfoData instead of the hardcoded dummy data above
+  };
   const renderContractInvokeContent = () => {
     const wasmSpec = contractClient?.spec;
 
