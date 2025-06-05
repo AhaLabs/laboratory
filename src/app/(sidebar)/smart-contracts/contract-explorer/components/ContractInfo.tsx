@@ -60,6 +60,8 @@ export const ContractInfo = ({
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
+  const isCustomNetwork = network.id === "custom";
+
   const isDataLoaded = Boolean(infoData);
   const sourceRepo =
     wasmData?.sourceRepo ||
@@ -89,36 +91,15 @@ export const ContractInfo = ({
     };
   }, [handleClickOutside, isBadgeTooltipVisible]);
 
-  type ContractExplorerInfoField = {
-    id: string;
-    label: string;
-  };
+  type ContractExplorerInfoField = { id: string; label: string };
 
   const INFO_FIELDS: ContractExplorerInfoField[] = [
-    {
-      id: "repository",
-      label: "Source Code",
-    },
-    {
-      id: "created",
-      label: "Created",
-    },
-    {
-      id: "wasm",
-      label: "Wasm Hash",
-    },
-    {
-      id: "versions",
-      label: "Versions",
-    },
-    {
-      id: "creator",
-      label: "Creator",
-    },
-    {
-      id: "storage_entries",
-      label: "Data Storage",
-    },
+    { id: "repository", label: "Source Code" },
+    { id: "created", label: "Created" },
+    { id: "wasm", label: "Wasm Hash" },
+    { id: "versions", label: "Versions" },
+    { id: "creator", label: "Creator" },
+    { id: "storage_entries", label: "Data Storage" },
   ];
 
   const InfoFieldItem = ({
@@ -365,7 +346,7 @@ export const ContractInfo = ({
                   isSourceStellarExpert={!wasmData?.sourceRepo}
                 />
               ),
-              isDisabled: !isDataLoaded,
+              isDisabled: !isDataLoaded || isCustomNetwork,
             }}
             tab3={{
               id: "contract-contract-storage",
@@ -379,7 +360,7 @@ export const ContractInfo = ({
                   isSourceStellarExpert={true}
                 />
               ) : null,
-              isDisabled: !isDataLoaded,
+              isDisabled: !isDataLoaded || isCustomNetwork,
             }}
             tab4={{
               id: "contract-build-info",
@@ -390,7 +371,7 @@ export const ContractInfo = ({
                   isActive={activeTab === "contract-build-info"}
                 />
               ),
-              isDisabled: !isDataLoaded,
+              isDisabled: !isDataLoaded || isCustomNetwork,
             }}
             tab5={{
               id: "contract-version-history",
@@ -403,7 +384,7 @@ export const ContractInfo = ({
                   isSourceStellarExpert={true}
                 />
               ) : null,
-              isDisabled: !isDataLoaded,
+              isDisabled: !isDataLoaded || isCustomNetwork,
             }}
             tab6={{
               id: "contract-bindings",

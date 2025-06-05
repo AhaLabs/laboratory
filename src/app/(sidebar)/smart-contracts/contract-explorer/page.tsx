@@ -27,6 +27,7 @@ import { trackEvent, TrackingEvent } from "@/metrics/tracking";
 import { ContractInfo } from "./components/ContractInfo";
 import { InvokeContract } from "./components/InvokeContract";
 import { ContractInfoApiResponse } from "@/types/types";
+import { useContractInfoFromRpc } from "@/query/useContractInfoFromRpc";
 
 export default function ContractExplorer() {
   const { network, smartContracts, savedContractId, clearSavedContractId } =
@@ -46,6 +47,18 @@ export default function ContractExplorer() {
   } = useSEContractInfo({ networkId: network.id, contractId: contractIdInput });
 
   const {
+    data: contractInfoDataFromRPC,
+    isFetching: isContractInfoFetchingFromRPC,
+    isLoading: isContractInfoLoadingFromRPC,
+    error: contractInfoRPCError,
+    refetch: fetchContractInfoRPC,
+  } = useContractInfoFromRpc({
+    contractId: contractIdInput,
+    networkPassphrase: network.passphrase,
+    rpcUrl: network.rpcUrl,
+  });
+
+  const {
     data: contractClient,
     isFetching: isFetchingContractClient,
     error: contractClientError,
@@ -61,14 +74,7 @@ export default function ContractExplorer() {
   // for local networks or when using custom networks
   const contractInfoData =
     contractInfoDataFromStellarExpertAPI ||
-    ({
-      contract: contractIdInput,
-      created: 1672000000,
-      creator: "creatorPublicKey",
-      description: "dummy description",
-      owner: "",
-      wasm: "5e6f40a51c590a27554c15ad368ae3772c3ca8bb219a54eb4f3e7ee93f69a4c5",
-    } as ContractInfoApiResponse);
+    (contractInfoDataFromRPC as ContractInfoApiResponse);
 
   const rpcUrl = network.rpcUrl;
   const wasmHash = contractInfoData?.wasm || "";
@@ -91,6 +97,8 @@ export default function ContractExplorer() {
   const isLoading =
     isContractInfoLoading ||
     isContractInfoFetching ||
+    isContractInfoLoadingFromRPC ||
+    isContractInfoFetchingFromRPC ||
     isWasmLoading ||
     isWasmFetching;
 
@@ -120,7 +128,11 @@ export default function ContractExplorer() {
   const resetFetchContractInfo = () => {
     if (contractInfoData) {
       queryClient.resetQueries({
-        queryKey: ["useSEContractInfo", "useClientFromRpc"],
+        queryKey: [
+          "useSEContractInfo",
+          "useClientFromRpc",
+          "useContractInfoFromRpc",
+        ],
       });
       smartContracts.resetExplorerContractId();
     }
@@ -144,15 +156,13 @@ export default function ContractExplorer() {
     // When using custom network, we can't fetch contract info from StellarExpert API
     // for now this is being bypassed for testing
     if (!isCustomNetwork) {
-      fetchContractInfoFromStellarExpertAPI();
+      return fetchContractInfoFromStellarExpertAPI();
     }
 
-    // ideally we would have a different way for getting the contract info for local networks
-    // and properly populue the contractInfoData instead of the hardcoded dummy data above
+    return fetchContractInfoRPC();
   };
   const renderContractInvokeContent = () => {
     const wasmSpec = contractClient?.spec;
-
     return contractInfoData && wasmSpec ? (
       <InvokeContract
         contractSpec={wasmSpec}
@@ -277,9 +287,13 @@ export default function ContractExplorer() {
             <>{renderButtons()}</>
 
             <>
-              {contractInfoError ? (
+              {contractInfoError || contractInfoRPCError ? (
                 <MessageField
-                  message={contractInfoError.toString()}
+                  message={
+                    contractInfoError?.toString() ||
+                    contractInfoRPCError?.toString() ||
+                    "An error occurred while fetching contract info."
+                  }
                   isError={true}
                 />
               ) : null}
